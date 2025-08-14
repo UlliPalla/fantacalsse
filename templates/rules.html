@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Regole</h1>
+<p>{{ rules.rules_text }}</p>
+
+<h2>Punteggi</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Evento</th>
+            <th>Punti</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, val in rules.points.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ val }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

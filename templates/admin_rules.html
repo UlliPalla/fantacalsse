@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Modifica Regole</h1>
+<form method="post" class="form-card">
+    <label>Budget iniziale
+        <input type="number" name="budget" min="0" value="{{ rules.budget }}" required>
+    </label>
+    <label>Testo Regole (pubblico)
+        <textarea name="rules_text" rows="5">{{ rules.rules_text }}</textarea>
+    </label>
+    <label>Punteggi (JSON oggetto {"evento": punti})
+        <textarea name="points_json" rows="10">{{ points_json }}</textarea>
+    </label>
+    <button type="submit">Salva</button>
+</form>
+{% endblock %}

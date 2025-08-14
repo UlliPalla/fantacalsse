@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Area Amministratore</h1>
+<div class="grid two-cols">
+    <a class="card-link" href="{{ url_for('admin_regole') }}">
+        <div class="card">
+            <h3>Modifica Regole</h3>
+            <p>Budget, testo regole e punteggi per evento.</p>
+        </div>
+    </a>
+    <a class="card-link" href="{{ url_for('admin_assegna_punti') }}">
+        <div class="card">
+            <h3>Assegna Punti</h3>
+            <p>Conferisci punti ai giocatori in base agli eventi.</p>
+        </div>
+    </a>
+</div>
+{% endblock %}

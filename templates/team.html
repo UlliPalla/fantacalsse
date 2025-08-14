@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Crea la tua squadra</h1>
+<div class="grid two-cols">
+    <section>
+        <h2>Budget</h2>
+        <p><strong>Totale:</strong> {{ budget }} | <strong>Speso:</strong> {{ spent }} | <strong>Rimanente:</strong> {{ remaining }}</p>
+    </section>
+    <section>
+        <h2>Regole rapide</h2>
+        <p>{{ rules.rules_text }}</p>
+    </section>
+</div>
+
+<h2>Giocatori disponibili</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Costo</th>
+            <th>Azione</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in players %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.cost }}</td>
+            <td>
+                {% if p.id in team_player_ids %}
+                    <form method="post" action="{{ url_for('vendi', player_id=p.id) }}">
+                        <button type="submit" class="btn secondary">Vendi</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{{ url_for('acquista', player_id=p.id) }}">
+                        <button type="submit" class="btn">Acquista</button>
+                    </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

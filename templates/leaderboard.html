@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Classifica</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Giocatore</th>
+            <th>Punti</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ row.username }}</td>
+            <td>{{ row.points }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if not rows %}
+<p>Nessun utente registrato.</p>
+{% endif %}
+{% endblock %}
