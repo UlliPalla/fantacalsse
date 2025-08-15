@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Assegna Punti ai Giocatori</h1>
+<form method="post" class="form-card">
+    <label>Giocatore
+        <select name="player_id" required>
+            {% for p in players %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    {% if point_keys %}
+    <fieldset>
+        <legend>Eventi</legend>
+        {% for key in point_keys %}
+        <label>{{ key }} ({{ rules.points[key] }} punti ciascuno)
+            <input type="number" name="count_{{ key }}" min="0" value="0">
+        </label>
+        {% endfor %}
+    </fieldset>
+    {% endif %}
+
+    <label>Punti extra
+        <input type="number" name="extra_points" value="0">
+    </label>
+
+    <label>Nota
+        <input type="text" name="note" placeholder="Motivo/descrizione">
+    </label>
+
+    <button type="submit">Assegna</button>
+</form>
+{% endblock %}
