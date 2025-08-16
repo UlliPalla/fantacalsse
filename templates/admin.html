@@ -27,4 +27,8 @@
         </div>
     </a>
 </div>
+
+<form method="post" action="{{ url_for('admin_reset_points') }}" onsubmit="return confirm('Sei sicuro di voler azzerare tutti i punteggi?')" style="margin-top:1rem">
+    <button type="submit" class="btn secondary">Resetta punteggi</button>
+</form>
 {% endblock %}

@@ -15,7 +15,7 @@
         <legend>Eventi</legend>
         {% for key in point_keys %}
         <label>{{ key }} ({{ rules.points[key] }} punti ciascuno)
-            <input type="number" name="count_{{ key }}" min="0" value="0">
+            <input type="number" name="count_{{ key }}" value="0">
         </label>
         {% endfor %}
     </fieldset>

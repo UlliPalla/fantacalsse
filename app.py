@@ -565,6 +565,26 @@ def admin_bonus_config():
 	return render_template('admin_bonus.html', bonuses=bonuses)
 
 
+@app.route('/signin')
+def signin_redirect():
+	return redirect(url_for('login'))
+
+
+@app.route('/signup')
+def signup_redirect():
+	return redirect(url_for('register'))
+
+
+@app.route('/admin/reset', methods=['POST'])
+@admin_required
+def admin_reset_points():
+	# Delete all performances (reset points to zero)
+	PlayerPerformance.query.delete()
+	db.session.commit()
+	flash('Tutti i punteggi sono stati azzerati.', 'info')
+	return redirect(url_for('admin_home'))
+
+
 if __name__ == '__main__':
     # For local development
     port = int(os.environ.get('PORT', 5000))
