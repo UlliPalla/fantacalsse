@@ -42,4 +42,23 @@
     </tbody>
 </table>
 
+{% if bonus_config %}
+<h2>Bonus squadra</h2>
+<form method="post" action="{{ url_for('salva_bonus') }}" class="form-card">
+    <div class="grid two-cols">
+        {% for key, cfg in bonus_config.items() %}
+        <label>{{ cfg.label }} ({{ key }})
+            <select name="bonus_{{ key }}">
+                <option value="">-- nessuno --</option>
+                {% for p in team_players %}
+                    <option value="{{ p.id }}" {% if current_assignments.get(key)==p.id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endfor %}
+    </div>
+    <button type="submit">Salva bonus</button>
+</form>
+{% endif %}
+
 {% endblock %}

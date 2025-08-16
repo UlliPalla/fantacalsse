@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Configura Bonus</h1>
+<form method="post" class="form-card">
+    <div class="grid two-cols">
+        {% for key, cfg in bonuses.items() %}
+        <fieldset class="card">
+            <legend>{{ key }}</legend>
+            <label>Etichetta
+                <input type="text" name="label_{{ key }}" value="{{ cfg.label }}">
+            </label>
+            <label>Moltiplicatore
+                <input type="number" step="0.01" name="multiplier_{{ key }}" value="{{ cfg.multiplier }}">
+            </label>
+        </fieldset>
+        {% endfor %}
+    </div>
+    <button type="submit">Salva</button>
+</form>
+<p>Questi bonus sono assegnabili dagli utenti nella pagina "Crea la tua squadra" ai propri giocatori. I punteggi della classifica vengono moltiplicati per i moltiplicatori dei bonus assegnati ai singoli giocatori.</p>
+{% endblock %}

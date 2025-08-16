@@ -48,6 +48,22 @@ class TeamPlayer(db.Model):
     __table_args__ = (db.UniqueConstraint('team_id', 'player_id', name='uix_team_player'),)
 
 
+class TeamBonusAssignment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    bonus_key = db.Column(db.String(10), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    team = db.relationship('Team', backref=db.backref('bonus_assignments', cascade='all, delete-orphan'))
+    player = db.relationship('Player')
+
+    __table_args__ = (
+        db.UniqueConstraint('team_id', 'bonus_key', name='uix_team_bonus_key'),
+        db.UniqueConstraint('team_id', 'player_id', name='uix_team_bonus_per_player'),
+    )
+
+
 class RuleConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     json_data = db.Column(db.Text, nullable=False)
@@ -100,12 +116,21 @@ def get_rule_config():
     if not rule:
         default = {
             "budget": 100,
+            "max_players": 6,
             "points": {
                 "goal": 5,
                 "assist": 3,
                 "clean_sheet": 4
             },
-            "rules_text": "Punteggi base: goal=5, assist=3, porta inviolata=4. Budget iniziale: 100."
+            "bonuses": {
+                "b1": {"label": "B1", "multiplier": 1.1},
+                "b2": {"label": "B2", "multiplier": 1.1},
+                "b3": {"label": "B3", "multiplier": 1.1},
+                "b4": {"label": "B4", "multiplier": 1.1},
+                "b5": {"label": "B5", "multiplier": 1.1},
+                "b6": {"label": "B6", "multiplier": 1.1}
+            },
+            "rules_text": "Punteggi base: goal=5, assist=3, porta inviolata=4. Budget iniziale: 100. Max giocatori: 6."
         }
         rule = RuleConfig(json_data=json.dumps(default, ensure_ascii=False))
         db.session.add(rule)
@@ -137,13 +162,23 @@ def ensure_team_for_user(user):
 
 def calculate_user_points(user):
     ensure_team_for_user(user)
-    team_player_ids = [tp.player_id for tp in user.team.team_players]
-    if not team_player_ids:
-        return 0
-    total = db.session.query(db.func.coalesce(db.func.sum(PlayerPerformance.points), 0)).filter(
-        PlayerPerformance.player_id.in_(team_player_ids)
-    ).scalar() or 0
-    return int(total)
+    rules = get_rule_config()
+    bonuses_cfg = rules.get('bonuses', {})
+
+    assignments = TeamBonusAssignment.query.filter_by(team_id=user.team.id).all()
+    player_multiplier = {}
+    for a in assignments:
+        factor = float(bonuses_cfg.get(a.bonus_key, {}).get('multiplier', 1.0))
+        player_multiplier[a.player_id] = player_multiplier.get(a.player_id, 1.0) * factor
+
+    total_points = 0
+    for tp in user.team.team_players:
+        base_points = db.session.query(db.func.coalesce(db.func.sum(PlayerPerformance.points), 0)).filter(
+            PlayerPerformance.player_id == tp.player_id
+        ).scalar() or 0
+        factor = player_multiplier.get(tp.player_id, 1.0)
+        total_points += int(round(base_points * factor))
+    return int(total_points)
 
 
 def calculate_team_spent(user):
@@ -283,6 +318,10 @@ def crea_squadra():
     budget = int(rules.get('budget', 100))
     spent = calculate_team_spent(user)
     remaining = budget - spent
+    team_players = [tp.player for tp in user.team.team_players]
+    assignments = TeamBonusAssignment.query.filter_by(team_id=user.team.id).all()
+    current_assignments = {a.bonus_key: a.player_id for a in assignments}
+    bonus_config = rules.get('bonuses', {})
     return render_template(
         'team.html',
         players=players,
@@ -290,7 +329,10 @@ def crea_squadra():
         budget=budget,
         spent=spent,
         remaining=remaining,
-        rules=rules
+        rules=rules,
+        team_players=team_players,
+        current_assignments=current_assignments,
+        bonus_config=bonus_config
     )
 
 
@@ -305,6 +347,10 @@ def acquista(player_id):
         flash('Giocatore già nella tua squadra.', 'info')
         return redirect(url_for('crea_squadra'))
     rules = get_rule_config()
+    max_players = int(rules.get('max_players', 6))
+    if len(user.team.team_players) >= max_players:
+        flash(f'Hai già il numero massimo di {max_players} giocatori.', 'danger')
+        return redirect(url_for('crea_squadra'))
     budget = int(rules.get('budget', 100))
     spent = calculate_team_spent(user)
     if spent + player.cost > budget:
@@ -336,6 +382,33 @@ def vendi(player_id):
 def regole():
     rules = get_rule_config()
     return render_template('rules.html', rules=rules)
+
+
+@app.route('/salva-bonus', methods=['POST'])
+@login_required
+def salva_bonus():
+	user = get_current_user()
+	ensure_team_for_user(user)
+	rules = get_rule_config()
+	bonus_keys = list(rules.get('bonuses', {}).keys())
+	# Remove existing assignments for this team
+	TeamBonusAssignment.query.filter_by(team_id=user.team.id).delete()
+	# Assign new ones if provided
+	for key in bonus_keys:
+		player_id_str = request.form.get(f'bonus_{key}', '').strip()
+		if not player_id_str:
+			continue
+		try:
+			pid = int(player_id_str)
+		except ValueError:
+			continue
+		# Only allow assigning bonuses to players actually in the team
+		in_team = TeamPlayer.query.filter_by(team_id=user.team.id, player_id=pid).first()
+		if in_team:
+			db.session.add(TeamBonusAssignment(team_id=user.team.id, player_id=pid, bonus_key=key))
+	db.session.commit()
+	flash('Bonus della squadra aggiornati.', 'success')
+	return redirect(url_for('crea_squadra'))
 
 
 @app.route('/admin')
@@ -404,6 +477,92 @@ def admin_assegna_punti():
         return redirect(url_for('admin_assegna_punti'))
 
     return render_template('admin_award.html', players=players, point_keys=point_keys, rules=rules)
+
+
+@app.route('/admin/giocatori', methods=['GET', 'POST'])
+@admin_required
+def admin_giocatori():
+	if request.method == 'POST':
+		name = request.form.get('name', '').strip()
+		cost = request.form.get('cost', '0').strip()
+		try:
+			cost_val = int(cost)
+		except Exception:
+			flash('Costo non valido.', 'danger')
+			return redirect(url_for('admin_giocatori'))
+		if not name:
+			flash('Nome richiesto.', 'warning')
+			return redirect(url_for('admin_giocatori'))
+		if Player.query.filter_by(name=name).first():
+			flash('Esiste già un giocatore con questo nome.', 'danger')
+			return redirect(url_for('admin_giocatori'))
+		p = Player(name=name, cost=cost_val)
+		db.session.add(p)
+		db.session.commit()
+		flash('Giocatore aggiunto.', 'success')
+		return redirect(url_for('admin_giocatori'))
+	players = Player.query.order_by(Player.name.asc()).all()
+	return render_template('admin_players.html', players=players)
+
+
+@app.route('/admin/giocatori/<int:player_id>/modifica', methods=['POST'])
+@admin_required
+def admin_modifica_giocatore(player_id):
+	p = Player.query.get_or_404(player_id)
+	name = request.form.get('name', '').strip()
+	cost = request.form.get('cost', '0').strip()
+	try:
+		cost_val = int(cost)
+	except Exception:
+		flash('Costo non valido.', 'danger')
+		return redirect(url_for('admin_giocatori'))
+	if not name:
+		flash('Nome richiesto.', 'warning')
+		return redirect(url_for('admin_giocatori'))
+	if name != p.name and Player.query.filter_by(name=name).first():
+		flash('Esiste già un giocatore con questo nome.', 'danger')
+		return redirect(url_for('admin_giocatori'))
+	p.name = name
+	p.cost = cost_val
+	db.session.commit()
+	flash('Giocatore aggiornato.', 'success')
+	return redirect(url_for('admin_giocatori'))
+
+
+@app.route('/admin/giocatori/<int:player_id>/elimina', methods=['POST'])
+@admin_required
+def admin_elimina_giocatore(player_id):
+	p = Player.query.get_or_404(player_id)
+	# Remove from teams and bonus assignments via cascade rules
+	db.session.delete(p)
+	db.session.commit()
+	flash('Giocatore eliminato.', 'info')
+	return redirect(url_for('admin_giocatori'))
+
+
+@app.route('/admin/bonus', methods=['GET', 'POST'])
+@admin_required
+def admin_bonus_config():
+	rules = get_rule_config()
+	bonuses = rules.get('bonuses', {})
+	if request.method == 'POST':
+		# Expect fields: for each key b1..b6 -> label_bX, multiplier_bX
+		new_bonuses = {}
+		for key in ['b1','b2','b3','b4','b5','b6']:
+			label = request.form.get(f'label_{key}', bonuses.get(key, {}).get('label', key)).strip()
+			mult = request.form.get(f'multiplier_{key}', str(bonuses.get(key, {}).get('multiplier', 1.0))).strip()
+			try:
+				mult_val = float(mult)
+			except Exception:
+				flash(f'Moltiplicatore non valido per {key}.', 'danger')
+				return render_template('admin_bonus.html', bonuses=bonuses)
+			new_bonuses[key] = {"label": label or key, "multiplier": mult_val}
+		# Save back to rules
+		rules['bonuses'] = new_bonuses
+		set_rule_config(rules)
+		flash('Bonus aggiornati.', 'success')
+		return redirect(url_for('admin_bonus_config'))
+	return render_template('admin_bonus.html', bonuses=bonuses)
 
 
 if __name__ == '__main__':

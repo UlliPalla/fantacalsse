@@ -14,5 +14,17 @@
             <p>Conferisci punti ai giocatori in base agli eventi.</p>
         </div>
     </a>
+    <a class="card-link" href="{{ url_for('admin_giocatori') }}">
+        <div class="card">
+            <h3>Gestione Giocatori</h3>
+            <p>Aggiungi, modifica e rimuovi giocatori e prezzi.</p>
+        </div>
+    </a>
+    <a class="card-link" href="{{ url_for('admin_bonus_config') }}">
+        <div class="card">
+            <h3>Configura Bonus</h3>
+            <p>Definisci etichette e moltiplicatori per b1..b6.</p>
+        </div>
+    </a>
 </div>
 {% endblock %}

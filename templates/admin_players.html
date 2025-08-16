@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Gestione Giocatori</h1>
+<div class="grid two-cols">
+    <section class="card">
+        <h2>Aggiungi giocatore</h2>
+        <form method="post" action="{{ url_for('admin_giocatori') }}" class="form-card">
+            <label>Nome
+                <input type="text" name="name" required>
+            </label>
+            <label>Costo
+                <input type="number" name="cost" min="0" required>
+            </label>
+            <button type="submit">Aggiungi</button>
+        </form>
+    </section>
+    <section class="card">
+        <h2>Elenco giocatori</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Costo</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in players %}
+                <tr>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.cost }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('admin_modifica_giocatore', player_id=p.id) }}" style="display:inline-block">
+                            <input type="text" name="name" value="{{ p.name }}" required>
+                            <input type="number" name="cost" min="0" value="{{ p.cost }}" required>
+                            <button type="submit" class="btn">Salva</button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin_elimina_giocatore', player_id=p.id) }}" style="display:inline-block" onsubmit="return confirm('Eliminare {{ p.name }}?')">
+                            <button type="submit" class="btn secondary">Elimina</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}
