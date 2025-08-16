@@ -16,6 +16,9 @@
                 <li><a href="{{ url_for('crea_squadra') }}">Crea la tua squadra</a></li>
                 {% endif %}
                 <li><a href="{{ url_for('regole') }}">Regole</a></li>
+                {% if current_user and current_user.is_admin %}
+                <li><a href="{{ url_for('admin_home') }}">Admin</a></li>
+                {% endif %}
             </ul>
             <ul class="nav-auth">
                 {% if session.get('user_id') %}
